@@ -15,7 +15,11 @@ Webová aplikace pro obchodníka: **ceník**, **nabídky** se stavy a slevami, *
 - **Banka (Fio)** – stažení pohybů přes Fio API, automatické spárování příchozích plateb s fakturami podle variabilního symbolu, ruční párování, endpoint pro pravidelnou synchronizaci.
 - **Uživatelé a role** – *administrátor*, *obchodník*, *účetní*, *jen čtení*; pozvánky odkazem, deaktivace, reset hesla.
 
-## Rychlé nasazení (Docker Compose)
+## Nasazení na Google Cloud
+
+Podrobný návod pro Cloud Run + Cloud SQL včetně skriptu je v [`deploy/gcp/README.md`](deploy/gcp/README.md).
+
+## Nasazení na vlastní server (Docker Compose)
 
 Potřebujete server s Dockerem (VPS, NAS, Coolify, Portainer…).
 
