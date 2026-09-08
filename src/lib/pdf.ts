@@ -9,7 +9,16 @@ import { readSupplier, type SupplierSnapshot } from "./documents";
 import type { Settings } from "./settings";
 import { czechIban, spaydString } from "./bank";
 
+import fs from "node:fs";
+
 const fontsDir = path.join(process.cwd(), "fonts");
+const logoPath = path.join(process.cwd(), "public", "logo.png");
+const logo = fs.existsSync(logoPath) ? logoPath : null;
+
+function titleRow(title: string, subtitle: string, number: string): Content {
+  const right: Content = { stack: [{ text: title, fontSize: 18, bold: true, alignment: "right" }, { text: `č. ${number}`, fontSize: 12, alignment: "right" }, ...(subtitle ? [{ text: subtitle, color: GRAY, alignment: "right" } as Content] : [])] };
+  return logo ? { columns: [{ image: logo, fit: [170, 64], width: 180 }, right], columnGap: 20 } : right;
+}
 const printer = new PdfPrinter({
   Liberation: {
     normal: path.join(fontsDir, "LiberationSans-Regular.ttf"),
@@ -172,13 +181,7 @@ export async function renderOfferPdf(offer: Offer & { items: OfferItem[]; subjec
     info: { title: `Nabídka ${offer.number}`, author: supplier.name },
     footer: footer(supplier, settings),
     content: [
-      {
-        columns: [
-          { text: "NABÍDKA", fontSize: 20, bold: true },
-          { text: `č. ${offer.number}`, fontSize: 14, alignment: "right", margin: [0, 5, 0, 0] },
-        ],
-      },
-      offer.title ? { text: offer.title, fontSize: 11, color: GRAY, margin: [0, 2, 0, 0] } : "",
+      titleRow("NABÍDKA", offer.title, offer.number),
       { canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: "#111827" }], margin: [0, 8, 0, 12] },
       {
         columns: [
@@ -270,12 +273,7 @@ export async function renderInvoicePdf(
     info: { title: `${TYPE_TITLES[inv.type]} ${inv.number}`, author: supplier.name },
     footer: footer(supplier, settings),
     content: [
-      {
-        columns: [
-          { stack: [{ text: TYPE_TITLES[inv.type], fontSize: 20, bold: true }, { text: subtitle, color: GRAY }] },
-          { text: `č. ${inv.number}`, fontSize: 14, alignment: "right", margin: [0, 5, 0, 0] },
-        ],
-      },
+      titleRow(TYPE_TITLES[inv.type], subtitle, inv.number),
       { canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: "#111827" }], margin: [0, 8, 0, 12] },
       {
         columns: [

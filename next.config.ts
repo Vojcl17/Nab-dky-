@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["pdfmake", "@prisma/client"],
   outputFileTracingIncludes: {
-    "/api/**/*": ["./fonts/**/*"],
+    "/api/**/*": ["./fonts/**/*", "./public/logo.png"],
   },
 };
 

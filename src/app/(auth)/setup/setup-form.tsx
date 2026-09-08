@@ -14,7 +14,7 @@ export function SetupForm() {
       </div>
       {state?.error && <Alert>{state.error}</Alert>}
       <Field label="Název firmy">
-        <input name="companyName" className="input" placeholder="Moje firma s.r.o." />
+        <input name="companyName" className="input" defaultValue="Alkrino s.r.o." />
       </Field>
       <Field label="Vaše jméno">
         <input name="name" className="input" required />

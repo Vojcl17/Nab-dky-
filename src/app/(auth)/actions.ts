@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { clearSessionCookie, hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth";
 import type { FormState } from "@/lib/action-state";
+import { COMPANY_DEFAULTS } from "@/lib/company-defaults";
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Neplatný e-mail"),
@@ -54,8 +55,8 @@ export async function setupAction(_prev: FormState, formData: FormData): Promise
   });
   await prisma.companySettings.upsert({
     where: { id: "default" },
-    create: { id: "default", name: parsed.data.companyName },
-    update: { name: parsed.data.companyName },
+    create: { id: "default", ...COMPANY_DEFAULTS, name: parsed.data.companyName || COMPANY_DEFAULTS.name },
+    update: { name: parsed.data.companyName || COMPANY_DEFAULTS.name },
   });
   await setSessionCookie(user.id);
   redirect("/nastaveni");

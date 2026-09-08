@@ -31,8 +31,10 @@ export function AppShell({
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
-          <Link href="/" className="font-semibold tracking-tight">
-            {companyName || "Nabídky a faktury"}
+          <Link href="/" className="flex items-center gap-3 font-semibold tracking-tight">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt={companyName || "Logo"} className="h-9 w-auto" />
+            <span className="sr-only">{companyName || "Nabídky a faktury"}</span>
           </Link>
           <nav className="flex flex-1 flex-wrap gap-1">
             {NAV.filter((n) => !n.permission || can(user.role, n.permission)).map((n) => {
