@@ -15,9 +15,16 @@ export async function saveSettingsAction(_prev: FormState, formData: FormData): 
   const raw = formToObject(formData);
   raw.vatPayer = formData.get("vatPayer") === "on";
   raw.roundCzkTotals = formData.get("roundCzkTotals") === "on";
+  raw.imapSecure = formData.get("imapSecure") === "on";
   const parsed = settingsSchema.safeParse(raw);
   if (!parsed.success) return { error: firstError(parsed.error) };
-  await prisma.companySettings.upsert({ where: { id: "default" }, create: { id: "default", ...parsed.data }, update: parsed.data });
+  // secrets are only replaced when a new value is entered
+  const data: Record<string, unknown> = { ...parsed.data };
+  if (!parsed.data.fioToken) delete data.fioToken;
+  if (!parsed.data.imapPassword) delete data.imapPassword;
+  if (formData.get("clearFioToken") === "on") data.fioToken = "";
+  if (formData.get("clearImapPassword") === "on") data.imapPassword = "";
+  await prisma.companySettings.upsert({ where: { id: "default" }, create: { id: "default", ...parsed.data }, update: data });
   revalidatePath("/", "layout");
   return { success: "Nastavení uloženo." };
 }

@@ -104,13 +104,13 @@ fi
 CRON_SECRET=$(gcloud secrets versions access latest --secret="${SERVICE}-cron-secret")
 if gcloud scheduler jobs describe "$SCHEDULER_JOB" --location="$REGION" >/dev/null 2>&1; then
   gcloud scheduler jobs update http "$SCHEDULER_JOB" --location="$REGION" \
-    --uri="${SERVICE_URL}/api/cron/fio" --http-method=GET \
+    --uri="${SERVICE_URL}/api/cron/sync" --http-method=GET \
     --update-headers="Authorization=Bearer ${CRON_SECRET}" >/dev/null
 else
-  log "Vytvářím Cloud Scheduler úlohu pro stahování výpisů z Fio (každou hodinu)"
+  log "Vytvářím Cloud Scheduler úlohu pro synchronizaci Fio a e-mailových poptávek (každou hodinu)"
   gcloud scheduler jobs create http "$SCHEDULER_JOB" --location="$REGION" \
     --schedule="15 * * * *" --time-zone="Europe/Prague" \
-    --uri="${SERVICE_URL}/api/cron/fio" --http-method=GET \
+    --uri="${SERVICE_URL}/api/cron/sync" --http-method=GET \
     --headers="Authorization=Bearer ${CRON_SECRET}" \
     --attempt-deadline=120s >/dev/null
 fi
@@ -119,4 +119,4 @@ log "Hotovo"
 echo
 echo "Aplikace běží na: ${SERVICE_URL}"
 echo "Při prvním otevření vytvořte účet administrátora a doplňte Nastavení (bankovní účet, Fio token)."
-echo "Výpisy z Fio se stahují automaticky každou hodinu (Cloud Scheduler: ${SCHEDULER_JOB})."
+echo "Výpisy z Fio a poptávky z e-mailu se stahují automaticky každou hodinu (Cloud Scheduler: ${SCHEDULER_JOB})."

@@ -22,6 +22,11 @@ export async function saveSubjectAction(id: string | null, _prev: FormState, for
     redirect(returnTo || `/subjekty/${id}`);
   } else {
     const created = await prisma.subject.create({ data });
+    const linkInquiryId = String(formData.get("linkInquiryId") ?? "");
+    if (linkInquiryId) {
+      await prisma.inquiry.updateMany({ where: { id: linkInquiryId, subjectId: null }, data: { subjectId: created.id } });
+      revalidatePath(`/poptavky/${linkInquiryId}`);
+    }
     revalidatePath("/subjekty");
     redirect(returnTo ? `${returnTo}${returnTo.includes("?") ? "&" : "?"}subjectId=${created.id}` : `/subjekty/${created.id}`);
   }

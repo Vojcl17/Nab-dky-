@@ -5,7 +5,7 @@ import { saveSettingsAction } from "./actions";
 import { Alert, Field, SubmitButton } from "@/components/ui";
 import { COUNTRY_NAMES, VAT_RATES } from "@/lib/format";
 
-type Values = Record<string, string | number | boolean>;
+type Values = Record<string, string | number | boolean | null>;
 
 export function SettingsForm({ s }: { s: Values }) {
   const [state, action] = useActionState(saveSettingsAction, null);
@@ -79,9 +79,36 @@ export function SettingsForm({ s }: { s: Values }) {
             <input name="bic" className="input" defaultValue={str("bic")} placeholder="FIOBCZPPXXX" />
           </Field>
         </div>
-        <Field label="Fio API token" hint="Vygenerujete v internetovém bankovnictví Fio: Nastavení → API. Stačí oprávnění „pouze sledovat“.">
-          <input name="fioToken" className="input font-mono text-xs" defaultValue={str("fioToken")} autoComplete="off" />
+        <Field label="Fio API token" hint={`Vygenerujete v internetovém bankovnictví Fio: Nastavení → API. Stačí oprávnění „pouze sledovat“.${s.hasFioToken ? " Token je uložen, vyplňte jen při změně." : ""}`}>
+          <input name="fioToken" className="input font-mono text-xs" autoComplete="off" placeholder={s.hasFioToken ? "••••••••" : ""} />
         </Field>
+      </section>
+
+      <section className="card space-y-4 p-6">
+        <h2 className="font-semibold">Poptávky z e-mailu</h2>
+        <p className="text-xs text-slate-500">
+          Aplikace se připojí přes IMAP do schránky, kam chodí poptávky (např. poptavky@alkrino.cz přidané jako příjemce aliasu alkrino@alkrino.cz), a nové e-maily uloží jako poptávky včetně příloh. Stahování spouštíte tlačítkem na stránce Poptávky nebo automaticky přes <code>/api/cron/sync</code>.
+        </p>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+          <Field label="IMAP server" className="md:col-span-2" hint="např. imap.gmail.com, imap.seznam.cz, mail.alkrino.cz">
+            <input name="imapHost" className="input" defaultValue={str("imapHost")} />
+          </Field>
+          <Field label="Port">
+            <input name="imapPort" type="number" className="input" defaultValue={String(s.imapPort ?? 993)} />
+          </Field>
+          <label className="flex items-end gap-2 pb-2 text-sm">
+            <input type="checkbox" name="imapSecure" defaultChecked={s.imapSecure !== false} /> SSL/TLS (993)
+          </label>
+          <Field label="Složka" className="md:col-span-2">
+            <input name="imapFolder" className="input" defaultValue={str("imapFolder") || "INBOX"} />
+          </Field>
+          <Field label="Uživatel (e-mail)" className="md:col-span-3">
+            <input name="imapUser" className="input" defaultValue={str("imapUser")} autoComplete="off" />
+          </Field>
+          <Field label="Heslo" className="md:col-span-3" hint={s.hasImapPassword ? "Heslo je uloženo. Vyplňte jen při změně. U Gmailu/Google Workspace použijte heslo aplikace." : "U Gmailu/Google Workspace použijte heslo aplikace (App password)."}>
+            <input name="imapPassword" type="password" className="input" autoComplete="new-password" placeholder={s.hasImapPassword ? "••••••••" : ""} />
+          </Field>
+        </div>
       </section>
 
       <section className="card space-y-4 p-6">
@@ -106,7 +133,10 @@ export function SettingsForm({ s }: { s: Values }) {
             <input type="checkbox" name="roundCzkTotals" defaultChecked={!!s.roundCzkTotals} /> Zaokrouhlovat CZK faktury na koruny
           </label>
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+          <Field label="Číslování poptávek">
+            <input name="inquiryNumberFormat" className="input font-mono" defaultValue={str("inquiryNumberFormat")} />
+          </Field>
           <Field label="Číslování nabídek">
             <input name="offerNumberFormat" className="input font-mono" defaultValue={str("offerNumberFormat")} />
           </Field>

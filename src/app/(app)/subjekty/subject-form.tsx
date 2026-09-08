@@ -36,9 +36,21 @@ const EMPTY: SubjectFormValues = {
   vatPayer: false,
 };
 
-export function SubjectForm({ subject, canDelete, returnTo }: { subject?: SubjectFormValues; canDelete?: boolean; returnTo?: string }) {
+export function SubjectForm({
+  subject,
+  canDelete,
+  returnTo,
+  initial,
+  linkInquiryId,
+}: {
+  subject?: SubjectFormValues;
+  canDelete?: boolean;
+  returnTo?: string;
+  initial?: Partial<SubjectFormValues>;
+  linkInquiryId?: string;
+}) {
   const [state, action] = useActionState(saveSubjectAction.bind(null, subject?.id ?? null), null);
-  const [values, setValues] = useState<SubjectFormValues>(subject ?? EMPTY);
+  const [values, setValues] = useState<SubjectFormValues>(subject ?? { ...EMPTY, ...initial });
   const [aresState, setAresState] = useState<{ loading?: boolean; error?: string; filled?: boolean }>({});
 
   const set = (k: keyof SubjectFormValues, v: string | boolean) => setValues((s) => ({ ...s, [k]: v }));
@@ -72,6 +84,7 @@ export function SubjectForm({ subject, canDelete, returnTo }: { subject?: Subjec
   return (
     <form action={action} className="card max-w-3xl space-y-4 p-6">
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
+      {linkInquiryId && <input type="hidden" name="linkInquiryId" value={linkInquiryId} />}
       <input type="hidden" name="aresFilled" value={aresState.filled ? "1" : "0"} />
       {state?.error && <Alert>{state.error}</Alert>}
       {aresState.error && <Alert>{aresState.error}</Alert>}

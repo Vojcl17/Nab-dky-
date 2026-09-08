@@ -57,11 +57,17 @@ export async function saveOfferAction(id: string | null, _prev: FormState, formD
       await tx.offer.update({ where: { id }, data: { ...base, items: { create: itemsToCreate(d.items) } } });
     });
   } else {
+    const inquiryId = d.inquiryId || null;
     const created = await prisma.$transaction(async (tx) => {
       const number = await nextNumber(tx, "OFFER", settings.offerNumberFormat, base.issueDate);
-      return tx.offer.create({ data: { ...base, number, createdById: user.id, items: { create: itemsToCreate(d.items) } } });
+      const offer = await tx.offer.create({ data: { ...base, number, inquiryId, createdById: user.id, items: { create: itemsToCreate(d.items) } } });
+      if (inquiryId) {
+        await tx.inquiry.updateMany({ where: { id: inquiryId, status: { in: ["NEW", "IN_PROGRESS"] } }, data: { status: "OFFERED", subjectId: base.subjectId } });
+      }
+      return offer;
     });
     offerId = created.id;
+    if (inquiryId) revalidatePath("/poptavky");
   }
   revalidatePath("/nabidky");
   redirect(`/nabidky/${offerId}`);
@@ -71,10 +77,15 @@ export async function setOfferStatusAction(formData: FormData) {
   await requireUser("offers:write");
   const id = String(formData.get("id"));
   const status = String(formData.get("status")) as OfferStatus;
-  const offer = await prisma.offer.findUnique({ where: { id }, select: { status: true } });
+  const offer = await prisma.offer.findUnique({ where: { id }, select: { status: true, inquiryId: true } });
   if (!offer) return;
   if (!TRANSITIONS[offer.status].includes(status)) redirectWithError(`/nabidky/${id}`, "Tato změna stavu není povolena.");
   await prisma.offer.update({ where: { id }, data: { status } });
+  if (offer.inquiryId) {
+    const inquiryStatus = status === "ACCEPTED" ? "WON" : status === "REJECTED" ? "LOST" : status === "SENT" || status === "DRAFT" ? "OFFERED" : null;
+    if (inquiryStatus) await prisma.inquiry.update({ where: { id: offer.inquiryId }, data: { status: inquiryStatus } });
+    revalidatePath("/poptavky");
+  }
   revalidatePath(`/nabidky/${id}`);
   revalidatePath("/nabidky");
 }
@@ -177,6 +188,9 @@ export async function createInvoiceFromOfferAction(formData: FormData) {
       },
       settings,
     );
+    if (offer.inquiryId) {
+      await tx.inquiry.update({ where: { id: offer.inquiryId }, data: { status: "WON" } });
+    }
     if (type === "INVOICE") {
       await tx.offer.update({ where: { id }, data: { status: "INVOICED" } });
     } else if (offer.status !== "INVOICED") {

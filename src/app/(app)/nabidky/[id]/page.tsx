@@ -17,6 +17,7 @@ export default async function OfferDetailPage({ params }: { params: Promise<{ id
     include: {
       items: { orderBy: { position: "asc" } },
       subject: true,
+      inquiry: { select: { id: true, number: true, subject: true } },
       createdBy: { select: { name: true } },
       invoices: { select: { id: true, number: true, type: true, status: true }, orderBy: { issueDate: "asc" } },
     },
@@ -101,6 +102,16 @@ export default async function OfferDetailPage({ params }: { params: Promise<{ id
               {offer.currency}
               {offer.currency !== "CZK" && <span className="text-slate-400"> (kurz {offer.exchangeRate.toString()})</span>}
             </dd>
+            {offer.inquiry && (
+              <>
+                <dt className="text-slate-500">Poptávka</dt>
+                <dd>
+                  <Link href={`/poptavky/${offer.inquiry.id}`} className="text-indigo-700 hover:underline">
+                    {offer.inquiry.number}
+                  </Link>
+                </dd>
+              </>
+            )}
             <dt className="text-slate-500">Vytvořil</dt>
             <dd>{offer.createdBy?.name ?? "—"}</dd>
             <dt className="text-slate-500">Upraveno</dt>

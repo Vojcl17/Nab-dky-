@@ -103,11 +103,11 @@ export async function syncFio(options: { from?: string; to?: string } = {}): Pro
     }
     await prisma.companySettings.update({ where: { id: "default" }, data: { fioLastSyncAt: new Date() } });
     const message = `Staženo ${imported} nových pohybů, spárováno ${matched}.`;
-    await prisma.fioSyncLog.create({ data: { ok: true, message, imported, matched } });
+    await prisma.syncLog.create({ data: { kind: "FIO", ok: true, message, imported, matched } });
     return { ok: true, message, imported, matched };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Neznámá chyba";
-    await prisma.fioSyncLog.create({ data: { ok: false, message, imported, matched } });
+    await prisma.syncLog.create({ data: { kind: "FIO", ok: false, message, imported, matched } });
     return { ok: false, message, imported, matched };
   }
 }

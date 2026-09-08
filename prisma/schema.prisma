@@ -29,6 +29,7 @@ model User {
   offers             Offer[]
   invoices           Invoice[]
   payments           Payment[]
+  inquiries          Inquiry[]    @relation("AssignedInquiries")
 }
 
 model Invitation {
@@ -76,10 +77,19 @@ model CompanySettings {
   invoiceFooterNote     String  @default("")
   fioToken              String  @default("")
   fioLastSyncAt         DateTime?
+  inquiryNumberFormat   String  @default("P{YYYY}{NNNN}")
+  imapHost              String  @default("")
+  imapPort              Int     @default(993)
+  imapSecure            Boolean @default(true)
+  imapUser              String  @default("")
+  imapPassword          String  @default("")
+  imapFolder            String  @default("INBOX")
+  imapLastSyncAt        DateTime?
   updatedAt             DateTime @updatedAt
 }
 
 enum SequenceKind {
+  INQUIRY
   OFFER
   INVOICE
   ADVANCE
@@ -114,8 +124,9 @@ model Subject {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  offers   Offer[]
-  invoices Invoice[]
+  offers    Offer[]
+  invoices  Invoice[]
+  inquiries Inquiry[]
 
   @@index([ico])
   @@index([name])
@@ -167,6 +178,8 @@ model Offer {
   status        OfferStatus  @default(DRAFT)
   subjectId     String
   subject       Subject      @relation(fields: [subjectId], references: [id])
+  inquiryId     String?
+  inquiry       Inquiry?     @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   issueDate     DateTime     @db.Date
   validUntil    DateTime     @db.Date
   currency      Currency     @default(CZK)
@@ -353,11 +366,76 @@ model ExchangeRate {
   @@unique([currency, date])
 }
 
-model FioSyncLog {
+enum SyncKind {
+  FIO
+  MAIL
+}
+
+model SyncLog {
   id       String   @id @default(cuid())
+  kind     SyncKind @default(FIO)
   at       DateTime @default(now())
   ok       Boolean
   message  String   @default("")
   imported Int      @default(0)
   matched  Int      @default(0)
+
+  @@index([kind, at])
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  OFFERED
+  WON
+  LOST
+  SPAM
+}
+
+enum InquirySource {
+  EMAIL
+  MANUAL
+}
+
+model Inquiry {
+  id           String        @id @default(cuid())
+  number       String        @unique
+  status       InquiryStatus @default(NEW)
+  source       InquirySource @default(EMAIL)
+  fromName     String        @default("")
+  fromEmail    String        @default("")
+  fromPhone    String        @default("")
+  subject      String        @default("")
+  bodyText     String        @default("")
+  bodyHtml     String        @default("")
+  receivedAt   DateTime      @default(now())
+  /// RFC Message-ID of the source e-mail (deduplication); null for manual inquiries
+  messageId    String?       @unique
+  subjectId    String?
+  customer     Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  assignedToId String?
+  assignedTo   User?         @relation("AssignedInquiries", fields: [assignedToId], references: [id], onDelete: SetNull)
+  note         String        @default("")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  attachments InquiryAttachment[]
+  offers      Offer[]
+
+  @@index([status])
+  @@index([fromEmail])
+  @@index([receivedAt])
+}
+
+model InquiryAttachment {
+  id          String   @id @default(cuid())
+  inquiryId   String
+  inquiry     Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  filename    String
+  contentType String   @default("application/octet-stream")
+  size        Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  @@index([inquiryId])
 }

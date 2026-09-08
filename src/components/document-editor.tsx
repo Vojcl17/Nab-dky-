@@ -34,6 +34,7 @@ export interface EditorSettings {
 
 export interface EditorHeader {
   subjectId: string;
+  inquiryId?: string;
   title: string;
   issueDate: string;
   validUntil: string;

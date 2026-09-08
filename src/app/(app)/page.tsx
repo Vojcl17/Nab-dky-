@@ -10,13 +10,14 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const settings = await getSettings();
   const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
-  const [openOffers, openInvoices, recentOffers, recentInvoices, unmatched, counts] = await Promise.all([
+  const [openOffers, openInvoices, recentOffers, recentInvoices, unmatched, counts, newInquiries] = await Promise.all([
     prisma.offer.findMany({ where: { status: { in: ["DRAFT", "SENT"] } }, include: { items: true } }),
     prisma.invoice.findMany({ where: { status: { in: ["ISSUED", "PARTIALLY_PAID"] }, type: { in: ["INVOICE", "ADVANCE"] } }, include: { items: true } }),
     prisma.offer.findMany({ orderBy: { updatedAt: "desc" }, take: 6, include: { subject: { select: { name: true } }, items: true } }),
     prisma.invoice.findMany({ orderBy: { updatedAt: "desc" }, take: 6, include: { items: true } }),
     prisma.bankTransaction.count({ where: { payment: null, amount: { gt: 0 } } }),
     Promise.all([prisma.subject.count(), prisma.priceItem.count({ where: { active: true } })]),
+    prisma.inquiry.count({ where: { status: { in: ["NEW", "IN_PROGRESS"] } } }),
   ]);
 
   const sumCzk = (docs: { items: Parameters<typeof computeTotals>[0]["items"]; discountType: "NONE" | "PERCENT" | "AMOUNT"; discountValue: { toString(): string }; exchangeRate: { toString(): string }; roundTotal?: boolean; paidAmount?: { toString(): string } }[]) =>
@@ -30,6 +31,7 @@ export default async function DashboardPage() {
   const setupIncomplete = !settings.name || !settings.ico;
 
   const tiles = [
+    { label: "Poptávky k vyřízení", value: String(newInquiries), sub: "nové a v řešení", href: "/poptavky", warn: newInquiries > 0 },
     { label: "Otevřené nabídky", value: String(openOffers.length), sub: formatMoney(sumCzk(openOffers), "CZK"), href: "/nabidky?stav=SENT" },
     { label: "Neuhrazené faktury", value: String(openInvoices.length), sub: formatMoney(sumCzk(openInvoices), "CZK"), href: "/faktury?stav=ISSUED" },
     { label: "Po splatnosti", value: String(overdue.length), sub: formatMoney(sumCzk(overdue), "CZK"), href: "/faktury?stav=OVERDUE", warn: overdue.length > 0 },
@@ -53,7 +55,7 @@ export default async function DashboardPage() {
           Doplňte údaje o firmě (název, IČO, bankovní účet) v <Link href="/nastaveni" className="font-medium underline">Nastavení</Link>, aby se správně tiskly doklady.
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {tiles.map((t) => (
           <Link key={t.label} href={t.href} className={`card p-5 transition hover:shadow ${t.warn ? "border-rose-200" : ""}`}>
             <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{t.label}</div>

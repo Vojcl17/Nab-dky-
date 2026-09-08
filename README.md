@@ -4,6 +4,8 @@ Webová aplikace pro obchodníka: **ceník**, **nabídky** se stavy a slevami, *
 
 ## Funkce
 
+- **Poptávky** – e-maily ze schránky pro poptávky (IMAP) se automaticky ukládají jako poptávky včetně příloh; lze je zadat i ručně. Z poptávky vytvoříte nabídku jedním klikem, stavy *nová → v řešení → nabídnuto → vyhráno / prohráno / spam* se přepínají podle osudu nabídky.
+
 - **Ceník** – položky s kódem, měrnou jednotkou, cenou v CZK (volitelně i v EUR) a sazbou DPH (21/12/0 %).
 - **Subjekty** – odběratelé; stačí zadat IČO a údaje se doplní z ARES.
 - **Nabídky** – položky z ceníku nebo volné, sleva na položku (%) i na celý doklad (% nebo částka), stavy *rozpracovaná → odeslaná → přijatá / odmítnutá / vypršela → vyfakturovaná*, duplikování, PDF.
@@ -44,19 +46,25 @@ Pro provoz na veřejné adrese dejte před aplikaci reverzní proxy s HTTPS (Cad
 | `AUTH_SECRET` | tajný klíč pro podepisování session cookies (min. 32 znaků) |
 | `APP_URL` | veřejná adresa aplikace, používá se v odkazech pozvánek |
 | `APP_PORT` | port publikovaný na hostiteli (výchozí 3000) |
-| `CRON_SECRET` | klíč pro `GET /api/cron/fio`; služba `fio-cron` v Compose volá endpoint každou hodinu |
+| `CRON_SECRET` | klíč pro `GET /api/cron/sync` (Fio výpisy + poptávky z e-mailu); služba `sync-cron` v Compose volá endpoint každou hodinu |
 
 ### Fio banka
 
 1. V internetovém bankovnictví Fio: *Nastavení → API → Přidat token* (stačí oprávnění „pouze sledovat“).
 2. Token vložte v aplikaci do *Nastavení → Bankovní spojení → Fio API token*.
-3. Na stránce **Banka** stáhněte pohyby tlačítkem, nebo nechte běžet službu `fio-cron` (vyžaduje `CRON_SECRET`). Endpoint můžete volat i z vlastního cronu:
+3. Na stránce **Banka** stáhněte pohyby tlačítkem, nebo nechte běžet službu `sync-cron` (vyžaduje `CRON_SECRET`). Endpoint můžete volat i z vlastního cronu:
 
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" https://vase-domena.cz/api/cron/fio
+curl -H "Authorization: Bearer $CRON_SECRET" https://vase-domena.cz/api/cron/sync
 ```
 
 Příchozí platby se párují podle variabilního symbolu a měny s vystavenými fakturami; po úplné úhradě se faktura označí jako uhrazená. Nespárované platby lze přiřadit ručně.
+
+### Poptávky z e-mailu
+
+1. Zřiďte schránku pro poptávky (např. `poptavky@alkrino.cz`) a přidejte ji jako příjemce aliasu, kam poptávky chodí (`alkrino@alkrino.cz`). Případně použijte přímo existující schránku.
+2. V *Nastavení → Poptávky z e-mailu* vyplňte IMAP server, port, uživatele a heslo. U Gmailu / Google Workspace je server `imap.gmail.com`, port 993 a místo hesla **heslo aplikace** (Účet Google → Zabezpečení → Hesla aplikací; vyžaduje dvoufázové ověření). U Seznamu `imap.seznam.cz`, port 993.
+3. Na stránce **Poptávky** stáhněte e-maily tlačítkem, nebo nechte běžet hodinovou synchronizaci (`sync-cron`, Cloud Scheduler). Při prvním stažení se importují e-maily za posledních 30 dní, dál jen nové. E-maily se ve schránce nemažou ani neoznačují.
 
 ### Zálohování
 
@@ -68,12 +76,12 @@ docker compose exec db pg_dump -U nabidky nabidky > zaloha.sql
 
 ## Role a oprávnění
 
-| Role | Ceník | Subjekty | Nabídky | Faktury | Úhrady a banka | Nastavení, uživatelé |
-| --- | --- | --- | --- | --- | --- | --- |
-| Administrátor | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| Obchodník | ✔ | ✔ | ✔ | ✔ | čtení | – |
-| Účetní | čtení | ✔ | čtení | ✔ | ✔ | – |
-| Jen čtení | čtení | čtení | čtení | čtení | čtení | – |
+| Role | Poptávky | Ceník | Subjekty | Nabídky | Faktury | Úhrady a banka | Nastavení, uživatelé |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Administrátor | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Obchodník | ✔ | ✔ | ✔ | ✔ | ✔ | čtení | – |
+| Účetní | čtení | čtení | ✔ | čtení | ✔ | ✔ | – |
+| Jen čtení | čtení | čtení | čtení | čtení | čtení | čtení | – |
 
 ## Lokální vývoj
 
@@ -90,4 +98,4 @@ Změna datového modelu: upravte `prisma/schema.prisma` a vytvořte migraci `npx
 
 ## Technologie
 
-Next.js 15 (App Router, Server Actions), TypeScript, Prisma + PostgreSQL, Tailwind CSS, pdfmake (PDF s QR platbou), vlastní generátor ISDOC, ARES REST API, ČNB kurzovní lístek, Fio API.
+Next.js 15 (App Router, Server Actions), TypeScript, Prisma + PostgreSQL, Tailwind CSS, pdfmake (PDF s QR platbou), vlastní generátor ISDOC, ARES REST API, ČNB kurzovní lístek, Fio API, IMAP (imapflow + mailparser).

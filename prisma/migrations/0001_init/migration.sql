@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'SALES', 'ACCOUNTANT', 'VIEWER');
 
 -- CreateEnum
-CREATE TYPE "SequenceKind" AS ENUM ('OFFER', 'INVOICE', 'ADVANCE', 'TAX_DOCUMENT', 'CREDIT_NOTE');
+CREATE TYPE "SequenceKind" AS ENUM ('INQUIRY', 'OFFER', 'INVOICE', 'ADVANCE', 'TAX_DOCUMENT', 'CREDIT_NOTE');
 
 -- CreateEnum
 CREATE TYPE "Currency" AS ENUM ('CZK', 'EUR');
@@ -24,6 +24,15 @@ CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID'
 
 -- CreateEnum
 CREATE TYPE "PaymentMethod" AS ENUM ('BANK_TRANSFER', 'CASH', 'CARD');
+
+-- CreateEnum
+CREATE TYPE "SyncKind" AS ENUM ('FIO', 'MAIL');
+
+-- CreateEnum
+CREATE TYPE "InquiryStatus" AS ENUM ('NEW', 'IN_PROGRESS', 'OFFERED', 'WON', 'LOST', 'SPAM');
+
+-- CreateEnum
+CREATE TYPE "InquirySource" AS ENUM ('EMAIL', 'MANUAL');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -86,6 +95,14 @@ CREATE TABLE "CompanySettings" (
     "invoiceFooterNote" TEXT NOT NULL DEFAULT '',
     "fioToken" TEXT NOT NULL DEFAULT '',
     "fioLastSyncAt" TIMESTAMP(3),
+    "inquiryNumberFormat" TEXT NOT NULL DEFAULT 'P{YYYY}{NNNN}',
+    "imapHost" TEXT NOT NULL DEFAULT '',
+    "imapPort" INTEGER NOT NULL DEFAULT 993,
+    "imapSecure" BOOLEAN NOT NULL DEFAULT true,
+    "imapUser" TEXT NOT NULL DEFAULT '',
+    "imapPassword" TEXT NOT NULL DEFAULT '',
+    "imapFolder" TEXT NOT NULL DEFAULT 'INBOX',
+    "imapLastSyncAt" TIMESTAMP(3),
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "CompanySettings_pkey" PRIMARY KEY ("id")
@@ -146,6 +163,7 @@ CREATE TABLE "Offer" (
     "number" TEXT NOT NULL,
     "status" "OfferStatus" NOT NULL DEFAULT 'DRAFT',
     "subjectId" TEXT NOT NULL,
+    "inquiryId" TEXT,
     "issueDate" DATE NOT NULL,
     "validUntil" DATE NOT NULL,
     "currency" "Currency" NOT NULL DEFAULT 'CZK',
@@ -287,15 +305,52 @@ CREATE TABLE "ExchangeRate" (
 );
 
 -- CreateTable
-CREATE TABLE "FioSyncLog" (
+CREATE TABLE "SyncLog" (
     "id" TEXT NOT NULL,
+    "kind" "SyncKind" NOT NULL DEFAULT 'FIO',
     "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "ok" BOOLEAN NOT NULL,
     "message" TEXT NOT NULL DEFAULT '',
     "imported" INTEGER NOT NULL DEFAULT 0,
     "matched" INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT "FioSyncLog_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "SyncLog_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Inquiry" (
+    "id" TEXT NOT NULL,
+    "number" TEXT NOT NULL,
+    "status" "InquiryStatus" NOT NULL DEFAULT 'NEW',
+    "source" "InquirySource" NOT NULL DEFAULT 'EMAIL',
+    "fromName" TEXT NOT NULL DEFAULT '',
+    "fromEmail" TEXT NOT NULL DEFAULT '',
+    "fromPhone" TEXT NOT NULL DEFAULT '',
+    "subject" TEXT NOT NULL DEFAULT '',
+    "bodyText" TEXT NOT NULL DEFAULT '',
+    "bodyHtml" TEXT NOT NULL DEFAULT '',
+    "receivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "messageId" TEXT,
+    "subjectId" TEXT,
+    "assignedToId" TEXT,
+    "note" TEXT NOT NULL DEFAULT '',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Inquiry_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "InquiryAttachment" (
+    "id" TEXT NOT NULL,
+    "inquiryId" TEXT NOT NULL,
+    "filename" TEXT NOT NULL,
+    "contentType" TEXT NOT NULL DEFAULT 'application/octet-stream',
+    "size" INTEGER NOT NULL,
+    "data" BYTEA NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "InquiryAttachment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -367,11 +422,35 @@ CREATE INDEX "Payment_invoiceId_idx" ON "Payment"("invoiceId");
 -- CreateIndex
 CREATE UNIQUE INDEX "ExchangeRate_currency_date_key" ON "ExchangeRate"("currency", "date");
 
+-- CreateIndex
+CREATE INDEX "SyncLog_kind_at_idx" ON "SyncLog"("kind", "at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Inquiry_number_key" ON "Inquiry"("number");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Inquiry_messageId_key" ON "Inquiry"("messageId");
+
+-- CreateIndex
+CREATE INDEX "Inquiry_status_idx" ON "Inquiry"("status");
+
+-- CreateIndex
+CREATE INDEX "Inquiry_fromEmail_idx" ON "Inquiry"("fromEmail");
+
+-- CreateIndex
+CREATE INDEX "Inquiry_receivedAt_idx" ON "Inquiry"("receivedAt");
+
+-- CreateIndex
+CREATE INDEX "InquiryAttachment_inquiryId_idx" ON "InquiryAttachment"("inquiryId");
+
 -- AddForeignKey
 ALTER TABLE "Invitation" ADD CONSTRAINT "Invitation_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Offer" ADD CONSTRAINT "Offer_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Subject"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Offer" ADD CONSTRAINT "Offer_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "Inquiry"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Offer" ADD CONSTRAINT "Offer_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -408,4 +487,13 @@ ALTER TABLE "Payment" ADD CONSTRAINT "Payment_bankTransactionId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Inquiry" ADD CONSTRAINT "Inquiry_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Subject"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Inquiry" ADD CONSTRAINT "Inquiry_assignedToId_fkey" FOREIGN KEY ("assignedToId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InquiryAttachment" ADD CONSTRAINT "InquiryAttachment_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "Inquiry"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

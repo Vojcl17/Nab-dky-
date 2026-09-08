@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { syncFio } from "@/lib/fio";
+import { syncMail } from "@/lib/mail";
 import { cronAuthorized } from "@/lib/cron-auth";
 
 export const dynamic = "force-dynamic";
 
-/** Periodic bank sync. Call e.g. hourly: curl -H "Authorization: Bearer $CRON_SECRET" https://app/api/cron/fio */
 export async function GET(req: Request) {
   if (!cronAuthorized(req)) return NextResponse.json({ error: "Neautorizováno" }, { status: 401 });
-  const result = await syncFio();
+  const result = await syncMail();
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
 }

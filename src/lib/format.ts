@@ -1,4 +1,4 @@
-import type { InvoiceStatus, InvoiceType, OfferStatus, Currency } from "@prisma/client";
+import type { InvoiceStatus, InvoiceType, OfferStatus, Currency, InquiryStatus } from "@prisma/client";
 
 export function formatMoney(value: number | string | { toString(): string } | null | undefined, currency: string = "CZK") {
   const n = typeof value === "number" ? value : Number(String(value ?? 0).replace(",", "."));
@@ -98,6 +98,30 @@ export const INVOICE_TYPE_SHORT: Record<InvoiceType, string> = {
   TAX_DOCUMENT: "DD k platbě",
   CREDIT_NOTE: "Dobropis",
 };
+
+export const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
+  NEW: "Nová",
+  IN_PROGRESS: "V řešení",
+  OFFERED: "Nabídnuto",
+  WON: "Vyhráno",
+  LOST: "Prohráno",
+  SPAM: "Spam",
+};
+
+export const INQUIRY_STATUS_COLORS: Record<InquiryStatus, string> = {
+  NEW: "bg-amber-100 text-amber-800",
+  IN_PROGRESS: "bg-blue-100 text-blue-800",
+  OFFERED: "bg-violet-100 text-violet-800",
+  WON: "bg-emerald-100 text-emerald-800",
+  LOST: "bg-rose-100 text-rose-800",
+  SPAM: "bg-slate-100 text-slate-500",
+};
+
+export function formatBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} kB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
 
 export const CURRENCIES: Currency[] = ["CZK", "EUR"];
 

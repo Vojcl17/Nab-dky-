@@ -19,7 +19,7 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
       take: 200,
       include: { payment: { include: { invoice: { select: { id: true, number: true, type: true } } } } },
     }),
-    prisma.fioSyncLog.findMany({ orderBy: { at: "desc" }, take: 5 }),
+    prisma.syncLog.findMany({ where: { kind: "FIO" }, orderBy: { at: "desc" }, take: 5 }),
     prisma.invoice.findMany({
       where: { status: { in: ["ISSUED", "PARTIALLY_PAID"] }, type: { in: ["INVOICE", "ADVANCE"] } },
       orderBy: { issueDate: "desc" },
@@ -58,7 +58,7 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
             </ul>
           )}
           <p className="mt-3 text-xs text-slate-400">
-            Automatické stahování: volejte pravidelně (např. cronem každou hodinu) <code>GET /api/cron/fio</code> s hlavičkou <code>Authorization: Bearer CRON_SECRET</code>.
+            Automatické stahování: volejte pravidelně (např. cronem každou hodinu) <code>GET /api/cron/sync</code> s hlavičkou <code>Authorization: Bearer CRON_SECRET</code>.
           </p>
         </div>
       )}

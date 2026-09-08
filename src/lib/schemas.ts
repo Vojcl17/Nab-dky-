@@ -24,6 +24,7 @@ const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatné datum");
 
 export const offerSchema = z.object({
   subjectId: z.string().min(1, "Vyberte odběratele"),
+  inquiryId: z.string().optional().default(""),
   title: z.string().default(""),
   issueDate: dateString,
   validUntil: dateString,
@@ -113,6 +114,23 @@ export const settingsSchema = z.object({
   offerFooterNote: z.string().default(""),
   invoiceFooterNote: z.string().default(""),
   fioToken: z.string().trim().default(""),
+  inquiryNumberFormat: z.string().trim().min(1).default("P{YYYY}{NNNN}"),
+  imapHost: z.string().trim().default(""),
+  imapPort: z.coerce.number().int().min(1).max(65535).default(993),
+  imapSecure: z.boolean().default(true),
+  imapUser: z.string().trim().default(""),
+  imapPassword: z.string().default(""),
+  imapFolder: z.string().trim().default("INBOX"),
+});
+
+export const inquirySchema = z.object({
+  fromName: z.string().trim().default(""),
+  fromEmail: z.string().trim().toLowerCase().default(""),
+  fromPhone: z.string().trim().default(""),
+  subject: z.string().trim().min(1, "Zadejte předmět poptávky"),
+  bodyText: z.string().default(""),
+  subjectId: z.string().optional().default(""),
+  note: z.string().default(""),
 });
 
 export function formToObject(fd: FormData): Record<string, unknown> {

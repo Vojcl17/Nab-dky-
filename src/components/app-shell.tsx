@@ -9,6 +9,7 @@ import { Flash } from "@/components/flash";
 
 const NAV: { href: string; label: string; permission?: Permission }[] = [
   { href: "/", label: "Přehled" },
+  { href: "/poptavky", label: "Poptávky" },
   { href: "/nabidky", label: "Nabídky" },
   { href: "/faktury", label: "Faktury" },
   { href: "/subjekty", label: "Subjekty" },

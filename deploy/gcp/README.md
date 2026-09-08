@@ -1,6 +1,6 @@
 # Nasazení na Google Cloud (Cloud Run + Cloud SQL)
 
-Aplikace poběží jako kontejner v **Cloud Run** (HTTPS zdarma, škáluje na nulu, platíte jen za provoz) s databází **Cloud SQL PostgreSQL** (automatické denní zálohy). Výpisy z Fio stahuje **Cloud Scheduler** každou hodinu.
+Aplikace poběží jako kontejner v **Cloud Run** (HTTPS zdarma, škáluje na nulu, platíte jen za provoz) s databází **Cloud SQL PostgreSQL** (automatické denní zálohy). Výpisy z Fio a poptávky z e-mailové schránky stahuje **Cloud Scheduler** každou hodinu.
 
 Orientační cena: Cloud SQL `db-f1-micro` cca 8–10 USD/měsíc, Cloud Run při běžném používání malým týmem obvykle zdarma nebo do 2 USD, Cloud Scheduler zdarma (3 úlohy v ceně).
 
@@ -72,4 +72,4 @@ gcloud secrets versions access latest --secret nabidky-cron-secret
 | Cloud SQL | `nabidky-db` | PostgreSQL 16, db-f1-micro, 10 GB, ochrana proti smazání |
 | Secret Manager | `nabidky-database-url`, `nabidky-auth-secret`, `nabidky-cron-secret`, `nabidky-db-password` | hesla generuje náhodně |
 | Cloud Run | `nabidky` | 512 MB RAM, 0–3 instance, veřejný přístup (aplikace má vlastní přihlášení) |
-| Cloud Scheduler | `nabidky-fio-sync` | každou hodinu v :15, volá `/api/cron/fio` |
+| Cloud Scheduler | `nabidky-fio-sync` | každou hodinu v :15, volá `/api/cron/sync` (Fio výpisy + poptávky z e-mailu) |

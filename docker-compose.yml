@@ -28,8 +28,8 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
 
-  # Pravidelné stahování výpisů z Fio (každou hodinu). Vyžaduje CRON_SECRET.
-  fio-cron:
+  # Pravidelná synchronizace (výpisy z Fio, poptávky z e-mailu) každou hodinu. Vyžaduje CRON_SECRET.
+  sync-cron:
     image: curlimages/curl:8.10.1
     restart: unless-stopped
     depends_on:
@@ -40,7 +40,7 @@ services:
       sh -c 'while true; do
         sleep 3600;
         if [ -n "$$CRON_SECRET" ]; then
-          curl -fsS -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron/fio || true;
+          curl -fsS -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron/sync || true;
         fi;
       done'
 
