@@ -18,7 +18,6 @@ Orientační cena: Cloud SQL `db-f1-micro` cca 8–10 USD/měsíc, Cloud Run př
 ```bash
 git clone https://github.com/Vojcl17/Nab-dky-.git nabidky
 cd nabidky
-git checkout claude/trader-app-offers-invoices-f6gb6g   # nebo main po sloučení
 PROJECT_ID=alkrino-nabidky ./deploy/gcp/deploy.sh
 ```
 
